@@ -1,0 +1,5 @@
+node_modules/
+.env
+tracker.db
+token.json
+credentials.json
