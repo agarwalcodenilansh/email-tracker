@@ -5,7 +5,6 @@ const cors = require('cors');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 const { google } = require('googleapis');
-const fs = require('fs');
 
 const app = express();
 const db = new Database('tracker.db');
@@ -139,77 +138,82 @@ app.get('/api/opens/:id', (req, res) => {
   res.json(events);
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+
 // ─── Gmail inbox reader ───────────────────────────────────────
 function getGmailClient() {
-    const credentials = JSON.parse(fs.readFileSync('credentials.json'));
-    const { client_id, client_secret } = credentials.installed || credentials.web;
-    const oauth2Client = new google.auth.OAuth2(
-      client_id, client_secret, 'http://localhost:3001/oauth2callback'
-    );
-    const token = JSON.parse(fs.readFileSync('token.json'));
-    oauth2Client.setCredentials(token);
-    return google.gmail({ version: 'v1', auth: oauth2Client });
-  }
-  
-  async function syncInbox() {
-    try {
-      const gmail = getGmailClient();
-  
-      // Get last 20 messages from inbox
-      const list = await gmail.users.messages.list({
-        userId: 'me',
-        labelIds: ['INBOX'],
-        maxResults: 20
-      });
-  
-      const messages = list.data.messages || [];
-  
-      for (const msg of messages) {
-        // Skip if already in DB
-        const exists = db.prepare('SELECT id FROM emails_received WHERE id = ?').get(msg.id);
-        if (exists) continue;
-  
-        const full = await gmail.users.messages.get({
-          userId: 'me',
-          id: msg.id,
-          format: 'metadata',
-          metadataHeaders: ['From', 'Subject', 'Date']
-        });
-  
-        const headers = full.data.payload.headers;
-        const from    = headers.find(h => h.name === 'From')?.value || 'Unknown';
-        const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
-        const date    = headers.find(h => h.name === 'Date')?.value || new Date().toISOString();
-  
-        const labelIds = full.data.labelIds || [];
-        const readByMe = labelIds.includes('UNREAD') ? 0 : 1;
-  
-        // Check if we replied (look for SENT label in same thread)
-        const thread = await gmail.users.threads.get({
-          userId: 'me',
-          id: full.data.threadId,
-          format: 'metadata'
-        });
-        const replied = thread.data.messages.some(m =>
-          (m.labelIds || []).includes('SENT')
-        ) ? 1 : 0;
-  
-        db.prepare(`
-          INSERT INTO emails_received (id, from_email, subject, received_at, read_by_me, replied)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(msg.id, from, subject, new Date(date).toISOString(), readByMe, replied);
-      }
-  
-      console.log(`📥 Inbox synced — ${messages.length} messages checked`);
-    } catch (err) {
-      console.error('Inbox sync error:', err.message);
+  // Read from environment variables instead of files
+  const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+  const { client_id, client_secret } = credentials.installed || credentials.web;
+  const oauth2Client = new google.auth.OAuth2(
+    client_id, client_secret, 'http://localhost:3001/oauth2callback'
+  );
+  const token = JSON.parse(process.env.GOOGLE_TOKEN);
+  oauth2Client.setCredentials(token);
+  return google.gmail({ version: 'v1', auth: oauth2Client });
+}
+
+async function syncInbox() {
+  try {
+    // Skip if env vars not set
+    if (!process.env.GOOGLE_CREDENTIALS || !process.env.GOOGLE_TOKEN) {
+      console.log('⚠️  GOOGLE_CREDENTIALS or GOOGLE_TOKEN not set — skipping inbox sync');
+      return;
     }
+
+    const gmail = getGmailClient();
+
+    const list = await gmail.users.messages.list({
+      userId: 'me',
+      labelIds: ['INBOX'],
+      maxResults: 20
+    });
+
+    const messages = list.data.messages || [];
+
+    for (const msg of messages) {
+      const exists = db.prepare('SELECT id FROM emails_received WHERE id = ?').get(msg.id);
+      if (exists) continue;
+
+      const full = await gmail.users.messages.get({
+        userId: 'me',
+        id: msg.id,
+        format: 'metadata',
+        metadataHeaders: ['From', 'Subject', 'Date']
+      });
+
+      const headers = full.data.payload.headers;
+      const from    = headers.find(h => h.name === 'From')?.value || 'Unknown';
+      const subject = headers.find(h => h.name === 'Subject')?.value || '(no subject)';
+      const date    = headers.find(h => h.name === 'Date')?.value || new Date().toISOString();
+
+      const labelIds = full.data.labelIds || [];
+      const readByMe = labelIds.includes('UNREAD') ? 0 : 1;
+
+      const thread = await gmail.users.threads.get({
+        userId: 'me',
+        id: full.data.threadId,
+        format: 'metadata'
+      });
+      const replied = thread.data.messages.some(m =>
+        (m.labelIds || []).includes('SENT')
+      ) ? 1 : 0;
+
+      db.prepare(`
+        INSERT INTO emails_received (id, from_email, subject, received_at, read_by_me, replied)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(msg.id, from, subject, new Date(date).toISOString(), readByMe, replied);
+    }
+
+    console.log(`📥 Inbox synced — ${messages.length} messages checked`);
+  } catch (err) {
+    console.error('Inbox sync error:', err.message);
   }
-  
-  // Sync inbox immediately on startup, then every 2 minutes
-  syncInbox();
-  setInterval(syncInbox, 2 * 60 * 1000);
+}
+
+syncInbox();
+setInterval(syncInbox, 2 * 60 * 1000);
+
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
   console.log(`📧 Sending as: ${process.env.GMAIL_USER}`);
