@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MailTrack — Email Intelligence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --bg: #080b12;
+    --surface: #0e1219;
+    --surface-2: #141820;
+    --surface-3: #1a1f2b;
+    --border: rgba(255,255,255,0.07);
+    --border-2: rgba(255,255,255,0.12);
+    --primary: #4f8eff;
+    --primary-glow: rgba(79,142,255,0.15);
+    --primary-dim: rgba(79,142,255,0.08);
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,0.1);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.1);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.1);
+    --indigo: #818cf8;
+    --indigo-dim: rgba(129,140,248,0.1);
+    --text: #e2e8f0;
+    --text-2: #94a3b8;
+    --text-3: #475569;
+  }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .font-display { font-family: 'Syne', sans-serif; }
+  .font-mono { font-family: 'DM Mono', monospace; }
+
+  /* Sidebar */
+  .sidebar {
+    position: fixed; left: 0; top: 0; height: 100vh; width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    padding: 20px 12px; z-index: 50;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+    font-size: 13px; font-weight: 500; color: var(--text-2);
+    cursor: pointer; transition: all 0.15s; margin-bottom: 2px;
+    text-decoration: none;
+  }
+  .nav-item:hover { background: var(--surface-3); color: var(--text); }
+  .nav-item.active { background: var(--primary-dim); color: var(--primary); border-right: 2px solid var(--primary); }
+  .nav-item .material-symbols-outlined { font-size: 18px; }
+
+  /* Header */
+  .topbar {
+    position: fixed; top: 0; left: 220px; right: 0; height: 58px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; z-index: 40;
+  }
+
+  /* Main */
+  .main { margin-left: 220px; padding-top: 58px; min-height: 100vh; }
+  .content { padding: 28px 28px; max-width: 1300px; }
+
+  /* Glass card */
+  .card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--border-2); }
+
+  /* Stat cards */
+  .stat-card { padding: 20px; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 700; line-height: 1; margin: 8px 0 4px; }
+  .stat-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-2); }
+  .stat-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; letter-spacing: 0.04em; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { border-bottom: 1px solid var(--border); }
+  th { padding: 11px 16px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); text-align: left; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; cursor: pointer; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody tr:last-child { border-bottom: none; }
+  td { padding: 13px 16px; font-size: 13px; }
+
+  /* Status badges */
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .badge-opened { background: var(--green-dim); color: var(--green); border: 1px solid rgba(52,211,153,0.2); }
+  .badge-sent { background: var(--primary-dim); color: var(--primary); border: 1px solid rgba(79,142,255,0.2); }
+  .badge-replied { background: var(--indigo-dim); color: var(--indigo); border: 1px solid rgba(129,140,248,0.2); }
+  .badge-unread { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(251,191,36,0.2); }
+  .badge-noread { background: rgba(255,255,255,0.04); color: var(--text-3); border: 1px solid var(--border); }
+
+  /* Input */
+  input, textarea, select {
+    background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); outline: none;
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+  }
+
+  /* Buttons */
+  .btn-primary {
+    background: var(--primary); color: #fff;
+    border: none; border-radius: 8px; padding: 9px 18px;
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-ghost {
+    background: transparent; color: var(--text-2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px;
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .btn-ghost:hover { background: var(--surface-3); color: var(--text); border-color: var(--border-2); }
+
+  /* Tab nav */
+  .tab-btn { padding: 7px 16px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; font-family: 'DM Sans', sans-serif; }
+  .tab-btn.active { background: var(--primary-dim); color: var(--primary); }
+  .tab-btn:not(.active) { background: transparent; color: var(--text-2); }
+  .tab-btn:not(.active):hover { background: var(--surface-3); color: var(--text); }
+
+  /* Chart bars */
+  .bar-wrap { display: flex; align-items: flex-end; gap: 6px; height: 80px; padding: 0 4px; }
+  .bar { flex: 1; border-radius: 4px 4px 0 0; background: var(--primary-dim); border: 1px solid rgba(79,142,255,0.15); transition: background 0.2s; cursor: pointer; min-height: 4px; }
+  .bar:hover { background: rgba(79,142,255,0.3); }
+  .bar.today { background: var(--primary); border-color: var(--primary); }
+
+  /* Avatar circle */
+  .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: font-size; font-size: 11px; font-weight: 700; flex-shrink: 0; justify-content: center; font-family: 'Syne', sans-serif; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 10px; }
+
+  /* Page sections */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Compose panel */
+  .compose-field { padding: 10px 14px; margin-bottom: 1px; }
+  .compose-field input, .compose-field textarea {
+    border: none; background: transparent; padding: 0;
+    font-size: 14px; box-shadow: none; resize: none;
+  }
+  .compose-field input:focus, .compose-field textarea:focus { box-shadow: none; border: none; }
+  .compose-divider { border-bottom: 1px solid var(--border); }
+
+  /* Toolbar icon btn */
+  .toolbar-btn { padding: 5px; border-radius: 5px; border: none; background: transparent; color: var(--text-2); cursor: pointer; transition: all 0.1s; display: flex; }
+  .toolbar-btn:hover { background: var(--surface-3); color: var(--text); }
+
+  /* Notification dot */
+  .notif-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); position: absolute; top: 1px; right: 1px; border: 1px solid var(--surface); }
+
+  /* Open count pill */
+  .open-pill { font-family: 'DM Mono', monospace; font-size: 11px; background: var(--surface-3); padding: 2px 7px; border-radius: 4px; color: var(--text-2); }
+
+  /* Inbox filter pills */
+  .inbox-filter {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 13px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text-2); font-family: 'DM Sans', sans-serif;
+  }
+  .inbox-filter:hover { border-color: var(--border-2); color: var(--text); background: var(--surface-3); }
+  .inbox-filter.active { background: var(--primary-dim); color: var(--primary); border-color: rgba(79,142,255,0.3); }
+  .inbox-filter[data-filter="unread"].active { background: var(--amber-dim); color: var(--amber); border-color: rgba(251,191,36,0.3); }
+  .inbox-filter[data-filter="read"].active { background: var(--green-dim); color: var(--green); border-color: rgba(52,211,153,0.3); }
+  .inbox-filter[data-filter="replied"].active { background: var(--indigo-dim); color: var(--indigo); border-color: rgba(129,140,248,0.3); }
+  .inbox-filter[data-filter="noreply"].active { background: rgba(255,255,255,0.04); color: var(--text-2); border-color: var(--border-2); }
+
+  /* Inbox row clickable */
+  .inbox-row { cursor: pointer; transition: background 0.15s; }
+  .inbox-row:hover { background: rgba(79,142,255,0.05) !important; }
+  .inbox-row.unread td:nth-child(3) { font-weight: 700; color: var(--text); }
+  .unread-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); flex-shrink: 0; }
+  .read-dot { width: 7px; height: 7px; border-radius: 50%; background: transparent; border: 1px solid var(--border-2); flex-shrink: 0; }
+
+  /* Progress bar */
+  .prog-track { height: 5px; background: var(--surface-3); border-radius: 10px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 10px; transition: width 1s ease; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface-2); border: 1px solid var(--border-2);
+    border-radius: 10px; padding: 12px 18px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 500; z-index: 100;
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    pointer-events: none;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+
+  /* Glow effects */
+  .glow-blue { box-shadow: 0 0 20px rgba(79,142,255,0.1); }
+  .pulse { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  /* Engagement timeline */
+  .timeline-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--primary); border: 2px solid var(--bg);
+    position: absolute; left: -4px; top: 4px;
+  }
+  .timeline-line {
+    position: absolute; left: 0; top: 12px; bottom: 0;
+    width: 1px; background: var(--border);
+  }
+
+  /* Search bar */
+  .search-wrap { position: relative; }
+  .search-wrap .material-symbols-outlined { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--text-3); pointer-events: none; }
+  .search-wrap input { padding: 7px 12px 7px 34px; border-radius: 8px; font-size: 12px; }
+</style>
+<script>
+  tailwind.config = { darkMode: 'class', theme: { extend: {} } }
+</script>
+</head>
+<body>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<aside class="sidebar">
+  <div style="padding: 4px 8px 24px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <div style="width:34px;height:34px;background:var(--primary);border-radius:9px;display:flex;align-items:center;justify-content:center;">
+        <span class="material-symbols-outlined" style="font-size:18px;color:#fff;font-variation-settings:'FILL' 1;">mail</span>
+      </div>
+      <div>
+        <div class="font-display" style="font-size:16px;font-weight:800;color:var(--text);line-height:1.1;">MailTrack</div>
+        <div style="font-size:10px;color:var(--text-3);font-weight:500;letter-spacing:0.06em;text-transform:uppercase;">Pro</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-primary" style="width:100%;margin-bottom:20px;justify-content:center;" onclick="showSection('compose')">
+    <span class="material-symbols-outlined" style="font-size:16px;">add</span>
+    Compose
+  </button>
+
+  <nav style="flex:1;">
+    <a class="nav-item active" id="nav-dashboard" onclick="showSection('dashboard')">
+      <span class="material-symbols-outlined">dashboard</span> Dashboard
+    </a>
+    <a class="nav-item" id="nav-tracking" onclick="showSection('tracking')">
+      <span class="material-symbols-outlined">track_changes</span> Tracking
+    </a>
+    <a class="nav-item" id="nav-inbox" onclick="showSection('inbox')">
+      <span class="material-symbols-outlined">inbox</span> Inbox
+      <span id="inbox-badge" style="margin-left:auto;background:var(--primary);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;display:none;"></span>
+    </a>
+    <a class="nav-item" id="nav-compose" onclick="showSection('compose')">
+      <span class="material-symbols-outlined">edit_square</span> New Email
+    </a>
+    <a class="nav-item" id="nav-analytics" onclick="showSection('analytics')">
+      <span class="material-symbols-outlined">bar_chart</span> Analytics
+    </a>
+  </nav>
+
+  <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;">
+    <div class="nav-item" style="color:var(--text-3);">
+      <span class="material-symbols-outlined">help_outline</span> Support
+    </div>
+    <div class="nav-item" style="color:var(--red);">
+      <span class="material-symbols-outlined">logout</span> Log Out
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════ TOPBAR ═══════════ -->
+<header class="topbar">
+  <div class="search-wrap" style="width:280px;">
+    <span class="material-symbols-outlined">search</span>
+    <input type="text" placeholder="Search emails, contacts..."/>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="btn-ghost" onclick="loadAll()">
+      <span class="material-symbols-outlined" style="font-size:15px;">refresh</span>
+      Refresh
+    </button>
+    <div style="position:relative;cursor:pointer;">
+      <span class="material-symbols-outlined" style="color:var(--text-2);font-size:20px;">notifications</span>
+      <div class="notif-dot"></div>
+    </div>
+    <div style="width:30px;height:30px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">N</div>
+  </div>
+</header>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<main class="main">
+<div class="content">
+
+<!-- ══ DASHBOARD SECTION ══ -->
+<div class="section active" id="section-dashboard">
+  <div style="margin-bottom:24px;display:flex;align-items:flex-end;justify-content:space-between;">
+    <div>
+      <div class="font-display" style="font-size:22px;font-weight:800;color:var(--text);">Dashboard</div>
+      <div style="font-size:13px;color:var(--text-2);margin-top:3px;">Your email activity at a glance</div>
+    </div>
+    <div style="font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;" id="last-updated">—</div>
+  </div>
+
+  <!-- Stat row -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+    <div class="card stat-card">
+      <div class="stat-label">Sent Today</div>
+      <div class="stat-value" id="stat-sent" style="color:var(--primary);">—</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--primary);">send</span>
+        <span style="font-size:11px;color:var(--text-3);">tracked emails</span>
+      </div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Received Today</div>
+      <div class="stat-value" id="stat-received" style="color:var(--indigo);">—</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--indigo);">inbox</span>
+        <span style="font-size:11px;color:var(--text-3);">in your inbox</span>
+      </div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Opened Today</div>
+      <div class="stat-value" id="stat-opened" style="color:var(--green);">—</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--green);">visibility</span>
+        <span style="font-size:11px;color:var(--text-3);">views tracked</span>
+      </div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Replied Today</div>
+      <div class="stat-value" id="stat-replied" style="color:var(--amber);">—</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+        <span class="material-symbols-outlined" style="font-size:14px;color:var(--amber);">reply</span>
+        <span style="font-size:11px;color:var(--text-3);">responses</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts + Recent -->
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:14px;margin-bottom:20px;">
+    <!-- Activity chart -->
+    <div class="card" style="padding:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div class="font-display" style="font-size:14px;font-weight:700;">Engagement Timeline</div>
+        <div style="display:flex;gap:4px;">
+          <button class="tab-btn active" onclick="setChartTab(this,'week')">Week</button>
+          <button class="tab-btn" onclick="setChartTab(this,'month')">Month</button>
+        </div>
+      </div>
+      <div class="bar-wrap" id="chart-bars" style="height:100px;"></div>
+      <div id="chart-labels" style="display:flex;gap:6px;padding:6px 4px 0;"></div>
+    </div>
+
+    <!-- Health score -->
+    <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+      <div class="font-display" style="font-size:14px;font-weight:700;">Delivery Health</div>
+      <div style="display:flex;justify-content:center;padding:8px 0;">
+        <div style="position:relative;width:100px;height:100px;">
+          <svg width="100" height="100" style="transform:rotate(-90deg)">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--surface-3)" stroke-width="8"/>
+            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--green)" stroke-width="8"
+              stroke-dasharray="263.9" stroke-dashoffset="26.4" stroke-linecap="round"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <span class="font-display" style="font-size:22px;font-weight:800;color:var(--green);">90</span>
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);">Score</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);">
+          <span class="material-symbols-outlined" style="font-size:14px;color:var(--green);font-variation-settings:'FILL' 1;">check_circle</span>
+          SPF/DKIM Active
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);">
+          <span class="material-symbols-outlined" style="font-size:14px;color:var(--green);font-variation-settings:'FILL' 1;">check_circle</span>
+          Low Bounce Rate
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);">
+          <span class="material-symbols-outlined" style="font-size:14px;color:var(--green);font-variation-settings:'FILL' 1;">check_circle</span>
+          No Spam Reports
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent sent -->
+  <div class="card">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <div class="font-display" style="font-size:14px;font-weight:700;">Recent Sent</div>
+      <button class="btn-ghost" onclick="showSection('tracking')">View All <span class="material-symbols-outlined" style="font-size:14px;">chevron_right</span></button>
+    </div>
+    <div id="dash-sent-list" style="padding:8px 0;">
+      <div style="text-align:center;padding:32px;color:var(--text-3);font-size:13px;">No emails sent yet</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TRACKING SECTION ══ -->
+<div class="section" id="section-tracking">
+  <div style="margin-bottom:24px;display:flex;align-items:flex-end;justify-content:space-between;">
+    <div>
+      <div class="font-display" style="font-size:22px;font-weight:800;">Sent Tracking</div>
+      <div style="font-size:13px;color:var(--text-2);margin-top:3px;">Monitor who opened your emails and when</div>
+    </div>
+    <button class="btn-ghost"><span class="material-symbols-outlined" style="font-size:15px;">download</span> Export CSV</button>
+  </div>
+
+  <!-- Filter row -->
+  <div style="display:flex;gap:8px;margin-bottom:16px;">
+    <select style="width:auto;padding:7px 32px 7px 12px;font-size:12px;" id="filter-status">
+      <option value="">All Status</option>
+      <option value="opened">Opened</option>
+      <option value="sent">Not Opened</option>
+      <option value="replied">Replied</option>
+    </select>
+    <button class="btn-ghost" onclick="loadSent()"><span class="material-symbols-outlined" style="font-size:15px;">filter_list</span> Filter</button>
+  </div>
+
+  <div class="card">
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Recipient</th>
+            <th>Subject</th>
+            <th>Sent</th>
+            <th>Opens</th>
+            <th>Last Opened</th>
+            <th>Status</th>
+            <th style="text-align:right;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="sent-table-body">
+          <tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:40px;">No sent emails yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:11px;color:var(--text-3);" id="sent-count">0 emails</span>
+      <div style="display:flex;gap:4px;">
+        <button class="btn-ghost" style="padding:5px 10px;">
+          <span class="material-symbols-outlined" style="font-size:15px;">chevron_left</span>
+        </button>
+        <button class="btn-ghost" style="padding:5px 10px;">
+          <span class="material-symbols-outlined" style="font-size:15px;">chevron_right</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ INBOX SECTION ══ -->
+<div class="section" id="section-inbox">
+  <!-- Header -->
+  <div style="margin-bottom:20px;display:flex;align-items:flex-end;justify-content:space-between;">
+    <div>
+      <div class="font-display" style="font-size:22px;font-weight:800;">Inbox</div>
+      <div style="font-size:13px;color:var(--text-2);margin-top:3px;">Click any email to open it in Gmail</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:11px;color:var(--text-3);" id="inbox-total-count"></span>
+      <button class="btn-ghost" onclick="loadInbox()">
+        <span class="material-symbols-outlined" style="font-size:15px;">refresh</span> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter pill tabs -->
+  <div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+    <button class="inbox-filter active" data-filter="all" onclick="setInboxFilter(this,'all')">
+      <span class="material-symbols-outlined" style="font-size:14px;">mail</span>
+      All <span class="filter-count" id="fc-all" style="background:var(--primary);color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:2px;"></span>
+    </button>
+    <button class="inbox-filter" data-filter="unread" onclick="setInboxFilter(this,'unread')">
+      <span class="material-symbols-outlined" style="font-size:14px;">mark_email_unread</span>
+      Unread <span class="filter-count" id="fc-unread" style="background:var(--amber);color:#000;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:2px;"></span>
+    </button>
+    <button class="inbox-filter" data-filter="read" onclick="setInboxFilter(this,'read')">
+      <span class="material-symbols-outlined" style="font-size:14px;">drafts</span>
+      Read <span class="filter-count" id="fc-read" style="background:var(--green);color:#000;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:2px;"></span>
+    </button>
+    <button class="inbox-filter" data-filter="replied" onclick="setInboxFilter(this,'replied')">
+      <span class="material-symbols-outlined" style="font-size:14px;">reply</span>
+      Replied <span class="filter-count" id="fc-replied" style="background:var(--indigo);color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:2px;"></span>
+    </button>
+    <button class="inbox-filter" data-filter="noreply" onclick="setInboxFilter(this,'noreply')">
+      <span class="material-symbols-outlined" style="font-size:14px;">remove_circle_outline</span>
+      No Reply <span class="filter-count" id="fc-noreply" style="background:var(--text-3);color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:2px;"></span>
+    </button>
+
+    <!-- Search inside inbox -->
+    <div style="margin-left:auto;" class="search-wrap" style="width:200px;">
+      <span class="material-symbols-outlined">search</span>
+      <input type="text" id="inbox-search" placeholder="Search inbox..." style="width:200px;font-size:12px;" oninput="renderInboxTable()"/>
+    </div>
+  </div>
+
+  <!-- Table card -->
+  <div class="card">
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:32px;"></th>
+            <th>From</th>
+            <th>Subject</th>
+            <th>Received</th>
+            <th>Read</th>
+            <th>Replied</th>
+            <th style="text-align:right;">Open</th>
+          </tr>
+        </thead>
+        <tbody id="inbox-table-body">
+          <tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:40px;">No inbox emails yet — connect Gmail to sync</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Footer -->
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:11px;color:var(--text-3);" id="inbox-showing"></span>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-3);">
+        <span class="material-symbols-outlined" style="font-size:13px;">open_in_new</span>
+        Click any row to open in Gmail
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ COMPOSE SECTION ══ -->
+<div class="section" id="section-compose">
+  <div style="display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start;">
+
+    <!-- Editor -->
+    <div>
+      <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+        <div class="font-display" style="font-size:22px;font-weight:800;">New Email</div>
+        <span style="font-size:11px;color:var(--text-3);" id="draft-saved">Draft auto-saved</span>
+      </div>
+
+      <div class="card" style="overflow:hidden;">
+        <!-- To / Subject fields -->
+        <div style="border-bottom:1px solid var(--border);" class="compose-field">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);width:40px;">To</span>
+            <input type="email" id="compose-to" placeholder="recipient@email.com" style="border:none;background:transparent;box-shadow:none;font-size:14px;padding:8px 0;"/>
+          </div>
+        </div>
+        <div style="border-bottom:1px solid var(--border);" class="compose-field">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-3);width:40px;">Sub</span>
+            <input type="text" id="compose-subject" placeholder="Email subject" style="border:none;background:transparent;box-shadow:none;font-size:14px;font-weight:600;padding:8px 0;"/>
+          </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div style="display:flex;align-items:center;gap:2px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface);">
+          <button class="toolbar-btn"><span class="material-symbols-outlined" style="font-size:18px;">format_bold</span></button>
+          <button class="toolbar-btn"><span class="material-symbols-outlined" style="font-size:18px;">format_italic</span></button>
+          <button class="toolbar-btn"><span class="material-symbols-outlined" style="font-size:18px;">format_underlined</span></button>
+          <div style="width:1px;height:18px;background:var(--border);margin:0 6px;"></div>
+          <button class="toolbar-btn"><span class="material-symbols-outlined" style="font-size:18px;">format_list_bulleted</span></button>
+          <button class="toolbar-btn"><span class="material-symbols-outlined" style="font-size:18px;">link</span></button>
+          <button class="toolbar-btn"><span class="material-symbols-outlined" style="font-size:18px;">attach_file</span></button>
+          <div style="flex:1;"></div>
+          <button class="toolbar-btn" style="color:var(--primary);"><span class="material-symbols-outlined" style="font-size:18px;">auto_awesome</span></button>
+        </div>
+
+        <!-- Body -->
+        <textarea id="compose-body" rows="14" placeholder="Write your email here..." style="border:none;background:transparent;box-shadow:none;padding:18px;font-size:14px;line-height:1.7;resize:none;width:100%;"></textarea>
+      </div>
+
+      <!-- Send area -->
+      <div style="display:flex;align-items:center;gap:10px;margin-top:14px;">
+        <button class="btn-primary" onclick="sendEmail()" style="padding:11px 22px;">
+          <span class="material-symbols-outlined" style="font-size:16px;">send</span>
+          Send with Tracking
+        </button>
+        <button class="btn-ghost">Save Template</button>
+        <span id="send-status" style="font-size:12px;color:var(--text-3);margin-left:4px;"></span>
+      </div>
+    </div>
+
+    <!-- Tracking sidebar -->
+    <div style="display:flex;flex-direction:column;gap:12px;position:sticky;top:80px;">
+      <div class="card" style="padding:18px;">
+        <div class="font-display" style="font-size:13px;font-weight:700;margin-bottom:14px;">Tracking Options</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface-3);border-radius:8px;cursor:pointer;border:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="material-symbols-outlined" style="font-size:18px;color:var(--primary);">visibility</span>
+              <div>
+                <div style="font-size:12px;font-weight:600;">Track Opens</div>
+                <div style="font-size:10px;color:var(--text-3);">Pixel notification</div>
+              </div>
+            </div>
+            <input type="checkbox" checked style="width:auto;accent-color:var(--primary);">
+          </label>
+          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface-3);border-radius:8px;cursor:pointer;border:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="material-symbols-outlined" style="font-size:18px;color:var(--primary);">ads_click</span>
+              <div>
+                <div style="font-size:12px;font-weight:600;">Track Links</div>
+                <div style="font-size:10px;color:var(--text-3);">Click monitoring</div>
+              </div>
+            </div>
+            <input type="checkbox" checked style="width:auto;accent-color:var(--primary);">
+          </label>
+          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface-3);border-radius:8px;cursor:pointer;border:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="material-symbols-outlined" style="font-size:18px;color:var(--primary);">schedule</span>
+              <div>
+                <div style="font-size:12px;font-weight:600;">Schedule Send</div>
+                <div style="font-size:10px;color:var(--text-3);">Optimal timing</div>
+              </div>
+            </div>
+            <span class="material-symbols-outlined" style="font-size:16px;color:var(--text-3);">chevron_right</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card" style="padding:16px;border-color:rgba(79,142,255,0.2);background:var(--primary-dim);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span class="material-symbols-outlined" style="font-size:16px;color:var(--primary);font-variation-settings:'FILL' 1;">verified</span>
+          <span style="font-size:12px;font-weight:700;color:var(--primary);">Tracking Active</span>
+        </div>
+        <p style="font-size:11px;color:var(--text-2);line-height:1.5;">A 1×1 invisible pixel will be embedded to detect opens in real-time.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ANALYTICS SECTION ══ -->
+<div class="section" id="section-analytics">
+  <div style="margin-bottom:24px;">
+    <div class="font-display" style="font-size:22px;font-weight:800;">Analytics</div>
+    <div style="font-size:13px;color:var(--text-2);margin-top:3px;">Deeper insights into your email performance</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;" id="analytics-cards">
+    <div class="card stat-card">
+      <div class="stat-label">Total Sent (All Time)</div>
+      <div class="stat-value" id="a-total-sent" style="color:var(--primary);">—</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Total Opens</div>
+      <div class="stat-value" id="a-total-opens" style="color:var(--green);">—</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-label">Open Rate</div>
+      <div class="stat-value" id="a-open-rate" style="color:var(--amber);">—%</div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:20px;">
+    <div class="font-display" style="font-size:14px;font-weight:700;margin-bottom:16px;">Top Opened Emails</div>
+    <div id="top-opened-list" style="display:flex;flex-direction:column;gap:10px;">
+      <div style="text-align:center;padding:32px;color:var(--text-3);font-size:13px;">No data yet — send some tracked emails first</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end content -->
+</main>
+
+<!-- Toast -->
+<div id="toast">
+  <span class="material-symbols-outlined" id="toast-icon" style="font-size:18px;"></span>
+  <span id="toast-msg"></span>
+</div>
+
+<!-- ═══════════ SCRIPT ═══════════ -->
+<script>
+  const material = { FILL: "font-variation-settings:'FILL' 1;" };
+
+  // ── Navigation ──
+  function showSection(name) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('section-' + name)?.classList.add('active');
+    document.getElementById('nav-' + name)?.classList.add('active');
+    if (name === 'tracking') loadSent();
+    if (name === 'inbox') { if (_inboxData.length) renderInboxTable(); else loadInbox(); }
+    if (name === 'analytics') loadAnalytics();
+  }
+
+  // ── Toast ──
+  function toast(msg, type='success') {
+    const t = document.getElementById('toast');
+    const icon = document.getElementById('toast-icon');
+    const m = document.getElementById('toast-msg');
+    icon.textContent = type === 'success' ? 'check_circle' : 'error';
+    icon.style.color = type === 'success' ? 'var(--green)' : 'var(--red)';
+    m.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  // ── Formatting ──
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-IN', {day:'2-digit',month:'short'}) + ' ' +
+      d.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'});
+  }
+  function fmtRelative(iso) {
+    if (!iso) return '—';
+    const diff = Date.now() - new Date(iso);
+    const m = Math.floor(diff/60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + 'm ago';
+    const h = Math.floor(m/60);
+    if (h < 24) return h + 'h ago';
+    return Math.floor(h/24) + 'd ago';
+  }
+  function avatarColor(str) {
+    const colors = ['#4f8eff','#818cf8','#34d399','#fbbf24','#f87171','#38bdf8','#a78bfa'];
+    let h = 0; for (let c of str) h = (h * 31 + c.charCodeAt(0)) % colors.length;
+    return colors[h];
+  }
+  function initials(email) {
+    const name = email.split('@')[0].replace(/[._-]/g,' ');
+    const parts = name.split(' ');
+    return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+  }
+
+  // ── Load all ──
+  async function loadAll() {
+    try {
+      // Stats
+      const stats = await fetch('/api/stats').then(r => r.json());
+      document.getElementById('stat-sent').textContent = stats.sent;
+      document.getElementById('stat-received').textContent = stats.received;
+      document.getElementById('stat-opened').textContent = stats.opened;
+      document.getElementById('stat-replied').textContent = stats.replied;
+      document.getElementById('last-updated').textContent =
+        'Updated ' + new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'});
+
+      // Dashboard recent sent
+      const sent = await fetch('/api/sent').then(r => r.json());
+      renderDashSent(sent.slice(0, 5));
+      renderChart(sent);
+
+      // Inbox badge
+      const inbox = await fetch('/api/inbox').then(r => r.json());
+      _inboxData = inbox;
+      updateFilterCounts(inbox);
+      const unread = inbox.filter(e => !e.read_by_me).length;
+      const badge = document.getElementById('inbox-badge');
+      if (unread > 0) { badge.textContent = unread; badge.style.display = 'inline'; }
+      else badge.style.display = 'none';
+
+    } catch(e) { console.error('Load error:', e); }
+  }
+
+  // ── Dashboard recent sent ──
+  function renderDashSent(emails) {
+    const el = document.getElementById('dash-sent-list');
+    if (!emails.length) { el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-3);font-size:13px;">No emails sent yet</div>'; return; }
+    el.innerHTML = emails.map(e => {
+      const col = avatarColor(e.to_email);
+      const init = initials(e.to_email);
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);transition:background 0.15s;cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background=''">
+        <div class="avatar" style="background:${col}20;color:${col};">${init}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.subject}</div>
+          <div style="font-size:11px;color:var(--text-3);">${e.to_email}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${e.open_count > 0
+            ? `<span class="badge badge-opened"><span class="badge-dot" style="background:var(--green);"></span>Opened</span>`
+            : `<span class="badge badge-noread">Not opened</span>`}
+          <span class="open-pill">${e.open_count}×</span>
+          <span style="font-size:11px;color:var(--text-3);width:60px;text-align:right;">${fmtRelative(e.sent_at)}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Chart ──
+  function renderChart(sent) {
+    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const today = new Date().getDay();
+    const counts = Array(7).fill(0);
+    sent.forEach(e => {
+      const d = new Date(e.sent_at).getDay();
+      const idx = ((d - 1 + 7) % 7);
+      counts[idx]++;
+    });
+    const max = Math.max(...counts, 1);
+    const todayIdx = ((today - 1 + 7) % 7);
+    document.getElementById('chart-bars').innerHTML = counts.map((c, i) =>
+      `<div class="bar ${i===todayIdx?'today':''}" style="height:${Math.max(6, (c/max)*100)}%;" title="${days[i]}: ${c}"></div>`
+    ).join('');
+    document.getElementById('chart-labels').innerHTML = days.map(d =>
+      `<div style="flex:1;text-align:center;font-size:10px;color:var(--text-3);">${d}</div>`
+    ).join('');
+  }
+
+  function setChartTab(btn, period) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  // ── Load sent ──
+  async function loadSent() {
+    try {
+      const sent = await fetch('/api/sent').then(r => r.json());
+      const tbody = document.getElementById('sent-table-body');
+      document.getElementById('sent-count').textContent = sent.length + ' email' + (sent.length===1?'':'s');
+      if (!sent.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:40px;">No sent emails yet</td></tr>';
+        return;
+      }
+      tbody.innerHTML = sent.map(e => {
+        const col = avatarColor(e.to_email);
+        const init = initials(e.to_email);
+        return `<tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:9px;">
+              <div class="avatar" style="background:${col}20;color:${col};font-size:10px;">${init}</div>
+              <div>
+                <div style="font-size:12px;font-weight:600;">${e.to_email.split('@')[0]}</div>
+                <div style="font-size:10px;color:var(--text-3);">${e.to_email}</div>
+              </div>
+            </div>
+          </td>
+          <td style="max-width:200px;">
+            <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.subject}</div>
+          </td>
+          <td style="font-size:11px;color:var(--text-3);white-space:nowrap;">${fmtDate(e.sent_at)}</td>
+          <td><span class="open-pill">${e.open_count}×</span></td>
+          <td style="font-size:11px;color:var(--text-3);">${e.last_opened ? fmtRelative(e.last_opened) : '—'}</td>
+          <td>${e.open_count > 0
+            ? `<span class="badge badge-opened"><span class="badge-dot" style="background:var(--green);"></span>Opened</span>`
+            : `<span class="badge badge-noread">Pending</span>`
+          }</td>
+          <td style="text-align:right;">
+            <button class="btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="viewOpens('${e.id}','${e.subject}')">Details</button>
+          </td>
+        </tr>`;
+      }).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  // ── Inbox state ──
+  let _inboxData = [];
+  let _inboxFilter = 'all';
+
+  function setInboxFilter(btn, filter) {
+    _inboxFilter = filter;
+    document.querySelectorAll('.inbox-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderInboxTable();
+  }
+
+  function gmailLink(email) {
+    // Build a Gmail search URL: search by sender + subject in the inbox
+    const q = encodeURIComponent(`from:${email.from_email} subject:${email.subject}`);
+    // If we have the Gmail message ID use it directly, otherwise fall back to search
+    if (email.id && email.id.length > 10 && !email.id.includes('-')) {
+      // Real Gmail message ID — open directly
+      return `https://mail.google.com/mail/u/0/#inbox/${email.id}`;
+    }
+    // Fallback: search Gmail
+    return `https://mail.google.com/mail/u/0/#search/${q}`;
+  }
+
+  // ── Load inbox ──
+  async function loadInbox() {
+    try {
+      const inbox = await fetch('/api/inbox').then(r => r.json());
+      _inboxData = inbox;
+      updateFilterCounts(inbox);
+      renderInboxTable();
+    } catch(e) { console.error(e); }
+  }
+
+  function updateFilterCounts(inbox) {
+    document.getElementById('fc-all').textContent = inbox.length;
+    document.getElementById('fc-unread').textContent = inbox.filter(e => !e.read_by_me).length;
+    document.getElementById('fc-read').textContent = inbox.filter(e => e.read_by_me).length;
+    document.getElementById('fc-replied').textContent = inbox.filter(e => e.replied).length;
+    document.getElementById('fc-noreply').textContent = inbox.filter(e => !e.replied).length;
+    document.getElementById('inbox-total-count').textContent = inbox.length + ' total';
+  }
+
+  function renderInboxTable() {
+    const tbody = document.getElementById('inbox-table-body');
+    const search = (document.getElementById('inbox-search')?.value || '').toLowerCase();
+
+    // Filter
+    let filtered = _inboxData.filter(e => {
+      if (_inboxFilter === 'unread') return !e.read_by_me;
+      if (_inboxFilter === 'read') return e.read_by_me;
+      if (_inboxFilter === 'replied') return e.replied;
+      if (_inboxFilter === 'noreply') return !e.replied;
+      return true;
+    });
+
+    // Search
+    if (search) {
+      filtered = filtered.filter(e =>
+        e.from_email?.toLowerCase().includes(search) ||
+        e.subject?.toLowerCase().includes(search)
+      );
+    }
+
+    // Update showing count
+    document.getElementById('inbox-showing').textContent =
+      `Showing ${filtered.length} of ${_inboxData.length} emails`;
+
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-3);padding:40px;">
+        ${_inboxData.length === 0
+          ? 'No inbox emails yet — connect Gmail to sync'
+          : 'No emails match this filter'}
+      </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(e => {
+      const col = avatarColor(e.from_email);
+      const init = initials(e.from_email);
+      const isUnread = !e.read_by_me;
+      const link = gmailLink(e);
+      return `<tr class="inbox-row ${isUnread ? 'unread' : ''}" onclick="openInGmail('${link}', '${e.id}')">
+        <td style="padding:12px 8px 12px 16px;">
+          <div class="${isUnread ? 'unread-dot' : 'read-dot'}"></div>
+        </td>
+        <td>
+          <div style="display:flex;align-items:center;gap:9px;">
+            <div class="avatar" style="background:${col}20;color:${col};font-size:10px;">${init}</div>
+            <div>
+              <div style="font-size:12px;font-weight:${isUnread ? '700' : '500'};">${e.from_email.split('@')[0]}</div>
+              <div style="font-size:10px;color:var(--text-3);">${e.from_email}</div>
+            </div>
+          </div>
+        </td>
+        <td style="max-width:260px;">
+          <div style="font-size:13px;font-weight:${isUnread ? '600' : '400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.subject || '(no subject)'}</div>
+        </td>
+        <td style="font-size:11px;color:var(--text-3);white-space:nowrap;">${fmtRelative(e.received_at)}</td>
+        <td>${e.read_by_me
+          ? `<span class="badge badge-opened"><span class="badge-dot" style="background:var(--green);"></span>Read</span>`
+          : `<span class="badge badge-unread"><span class="badge-dot" style="background:var(--amber);"></span>Unread</span>`
+        }</td>
+        <td>${e.replied
+          ? `<span class="badge badge-replied"><span class="badge-dot" style="background:var(--indigo);"></span>Replied</span>`
+          : `<span class="badge badge-noread">No reply</span>`
+        }</td>
+        <td style="text-align:right;">
+          <button class="btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();openInGmail('${link}', '${e.id}')">
+            <span class="material-symbols-outlined" style="font-size:13px;">open_in_new</span>
+            Gmail
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function openInGmail(link, id) {
+    window.open(link, '_blank');
+  }
+
+  // ── Analytics ──
+  async function loadAnalytics() {
+    try {
+      const sent = await fetch('/api/sent').then(r => r.json());
+      const totalSent = sent.length;
+      const totalOpens = sent.reduce((a, e) => a + (e.open_count || 0), 0);
+      const openRate = totalSent ? Math.round((sent.filter(e => e.open_count > 0).length / totalSent) * 100) : 0;
+      document.getElementById('a-total-sent').textContent = totalSent;
+      document.getElementById('a-total-opens').textContent = totalOpens;
+      document.getElementById('a-open-rate').textContent = openRate + '%';
+
+      const top = [...sent].sort((a, b) => (b.open_count||0) - (a.open_count||0)).slice(0, 5);
+      const maxO = top[0]?.open_count || 1;
+      const el = document.getElementById('top-opened-list');
+      if (!top.length || top[0].open_count === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-3);font-size:13px;">No data yet</div>';
+        return;
+      }
+      el.innerHTML = top.map(e => `
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.subject}</div>
+            <div class="prog-track" style="flex:1;">
+              <div class="prog-fill" style="width:${(e.open_count/maxO)*100}%;background:var(--primary);"></div>
+            </div>
+          </div>
+          <span class="open-pill">${e.open_count}×</span>
+        </div>
+      `).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  // ── View open details ──
+  async function viewOpens(id, subject) {
+    try {
+      const events = await fetch('/api/opens/' + id).then(r => r.json());
+      if (!events.length) { toast('No open events yet for this email', 'error'); return; }
+      const info = events.map(ev =>
+        `${fmtDate(ev.opened_at)} — ${ev.ip || 'unknown IP'}`
+      ).join('\n');
+      alert(`"${subject}"\n\nOpen Events (${events.length}×):\n\n${info}`);
+    } catch(e) { toast('Could not load open events', 'error'); }
+  }
+
+  // ── Send email ──
+  async function sendEmail() {
+    const to = document.getElementById('compose-to').value.trim();
+    const subject = document.getElementById('compose-subject').value.trim();
+    const body = document.getElementById('compose-body').value.trim();
+    const status = document.getElementById('send-status');
+
+    if (!to || !subject || !body) {
+      status.textContent = '⚠ Fill all fields';
+      status.style.color = 'var(--amber)';
+      return;
+    }
+
+    status.textContent = 'Sending...';
+    status.style.color = 'var(--text-3)';
+
+    try {
+      const res = await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, subject, body })
+      });
+      const data = await res.json();
+      if (data.success) {
+        status.textContent = '';
+        document.getElementById('compose-to').value = '';
+        document.getElementById('compose-subject').value = '';
+        document.getElementById('compose-body').value = '';
+        toast('Email sent with tracking! ✓');
+        loadAll();
+        setTimeout(() => showSection('tracking'), 1200);
+      } else {
+        status.textContent = '✗ ' + data.error;
+        status.style.color = 'var(--red)';
+        toast(data.error, 'error');
+      }
+    } catch(err) {
+      status.textContent = '✗ Failed to reach server';
+      status.style.color = 'var(--red)';
+      toast('Failed to send', 'error');
+    }
+  }
+
+  // ── Init ──
+  loadAll();
+  setInterval(loadAll, 30000);
+</script>
+</body>
+</html>
