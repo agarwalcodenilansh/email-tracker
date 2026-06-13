@@ -11,7 +11,7 @@ const db = new Database('tracker.db');
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(__dirname));
 
 // ─── Database setup ───────────────────────────────────────────
 db.exec(`
