@@ -4,7 +4,28 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>MailTrack — Email Intelligence</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script src="https://cdn.tailwindcss.com?plugins=forms">
+ // ── Paste this at the top of your index.html <script> block ──
+
+async function checkAuth() {
+  try {
+    const r = await fetch('/api/me', { credentials: 'include' });
+    if (!r.ok) { window.location.href = '/login'; return; }
+    const user = await r.json();
+    // Show logged-in user's email in your header if you have one
+    const el = document.getElementById('user-email');
+    if (el) el.textContent = user.gmail_user;
+  } catch(e) { window.location.href = '/login'; }
+}
+
+async function logout() {
+  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  window.location.href = '/login';
+}
+
+// Run on page load
+checkAuth();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <style>
   * { box-sizing: border-box; }
