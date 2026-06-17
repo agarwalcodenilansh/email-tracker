@@ -11,7 +11,7 @@ const db = new Database('tracker.db');
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static('public'));
 
 // ─── Database setup ───────────────────────────────────────────
 db.exec(`
@@ -43,18 +43,13 @@ db.exec(`
 
 // ─── Gmail transporter ────────────────────────────────────────
 const transporter = nodemailer.createTransport({
-  host: "74.125.133.108",   // smtp.gmail.com IPv4 — or use "smtp4.gmail.com"
-  port: 587,
-  secure: false,
+  service: 'gmail',
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
-  tls: {
-    servername: "smtp.gmail.com",   // ← needed since we're using IP directly
-    rejectUnauthorized: false
-  }
 });
+
 // ─── Tracking pixel ───────────────────────────────────────────
 app.get('/track/open/:id', (req, res) => {
   const { id } = req.params;
