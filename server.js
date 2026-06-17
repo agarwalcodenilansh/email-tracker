@@ -43,16 +43,16 @@ db.exec(`
 
 // ─── Gmail transporter ────────────────────────────────────────
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,         // ← 465 → 587
-  secure: false,     // ← true → false (587 uses STARTTLS)
-  family: 4,
+  host: "74.125.133.108",   // smtp.gmail.com IPv4 — or use "smtp4.gmail.com"
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
   tls: {
-    rejectUnauthorized: false  // helps in some Railway environments
+    servername: "smtp.gmail.com",   // ← needed since we're using IP directly
+    rejectUnauthorized: false
   }
 });
 // ─── Tracking pixel ───────────────────────────────────────────
